@@ -1,0 +1,35 @@
+.alarm-time { font-size: 30px; font-weight: 300; }
+.alarm-off .alarm-time, .alarm-off .alarm-detail { opacity: 0.45; }
+.alarm-label { font-weight: bold; }
+.alarm-detail { opacity: 0.75; }
+.next-alarm { font-size: 15px; padding: 10px; }
+.empty-state { font-size: 18px; opacity: 0.7; }
+.big-spin { font-size: 28px; }
+.section-title { font-weight: bold; margin-top: 8px; }
+.drag-handle { opacity: 0.5; }
+.drop-target { background-color: alpha(@accent_color, 0.15); }
+
+.ringing { background-color: #10233f; color: #ffffff; }
+.ringing label { color: #ffffff; }
+.ring-time { font-size: 96px; font-weight: 300; }
+.ring-label { font-size: 30px; font-weight: bold; }
+.ring-instruction { font-size: 20px; opacity: 0.9; }
+.ring-status { font-size: 18px; color: #ffd166; }
+.good-morning { font-size: 72px; font-weight: bold; }
+.puzzle-title { font-size: 22px; font-weight: bold; }
+.puzzle-progress { font-size: 18px; color: #ffd166; }
+.puzzle-feedback { font-size: 18px; }
+
+.math-problem { font-size: 64px; font-weight: bold; }
+.math-entry { font-size: 48px; min-height: 72px; }
+
+.simon-pad { min-width: 200px; min-height: 200px; border-radius: 24px; border: 4px solid rgba(255,255,255,0.25); background-image: none; box-shadow: none; }
+.simon-0 { background-color: #1f8a3a; }
+.simon-1 { background-color: #b3261e; }
+.simon-2 { background-color: #c79a00; }
+.simon-3 { background-color: #1e5bb3; }
+.simon-0.lit { background-color: #6cff8f; }
+.simon-1.lit { background-color: #ff7b72; }
+.simon-2.lit { background-color: #ffe45c; }
+.simon-3.lit { background-color: #79b8ff; }
+.lit { border-color: #ffffff; }
