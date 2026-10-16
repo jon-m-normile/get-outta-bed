@@ -14,15 +14,54 @@ SAFETY_CAP_MINUTES = 60
 GOOD_MORNING_SECONDS = 2
 
 
+def keep_above(window):
+    """Ask the X11 window manager to keep `window` above other windows (GTK 4 has no API for it)."""
+    try:
+        import ctypes
+        import gi
+        gi.require_version("GdkX11", "4.0")
+        from gi.repository import GdkX11
+        surface = window.get_surface()
+        if not isinstance(surface, GdkX11.X11Surface):
+            return False
+        x = ctypes.cdll.LoadLibrary("libX11.so.6")
+        x.XOpenDisplay.restype = ctypes.c_void_p
+        x.XDefaultRootWindow.argtypes = [ctypes.c_void_p]
+        x.XDefaultRootWindow.restype = ctypes.c_ulong
+        x.XInternAtom.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int]
+        x.XInternAtom.restype = ctypes.c_ulong
+        x.XSendEvent.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_int, ctypes.c_long, ctypes.c_void_p]
+        x.XFlush.argtypes = x.XCloseDisplay.argtypes = [ctypes.c_void_p]
+        dpy = x.XOpenDisplay(None)
+        if not dpy:
+            return False
+
+        class ClientMessage(ctypes.Structure):
+            _fields_ = [("type", ctypes.c_int), ("serial", ctypes.c_ulong), ("send_event", ctypes.c_int),
+                        ("display", ctypes.c_void_p), ("window", ctypes.c_ulong), ("message_type", ctypes.c_ulong),
+                        ("format", ctypes.c_int), ("data", ctypes.c_long * 5), ("pad", ctypes.c_long * 12)]
+
+        ev = ClientMessage(type=33, send_event=1, display=dpy, window=surface.get_xid(),
+                           message_type=x.XInternAtom(dpy, b"_NET_WM_STATE", 0), format=32)
+        ev.data[0], ev.data[1], ev.data[3] = 1, x.XInternAtom(dpy, b"_NET_WM_STATE_ABOVE", 0), 1
+        x.XSendEvent(dpy, x.XDefaultRootWindow(dpy), 0, (1 << 19) | (1 << 20), ctypes.byref(ev))
+        x.XFlush(dpy)
+        x.XCloseDisplay(dpy)
+    except Exception as e:
+        log(f"ERROR keeping ring window on top: {e!r}")
+    return False
+
+
 class RingWindow(Gtk.Window):
-    """Fullscreen, cannot be closed or escaped until allow_close is set."""
+    """Always-on-top window on the current workspace; cannot be closed until allow_close is set."""
 
     def __init__(self, app, alarm: Alarm, puzzle):
-        super().__init__(application=app, title="Get Outta Bed!", decorated=False)
+        super().__init__(application=app, title="Get Outta Bed!", decorated=False, resizable=False)
         # Own window group, so an open modal dialog (e.g. the editor's "Ring now") can't block the puzzle.
         self.group = Gtk.WindowGroup()
         self.group.add_window(self)
         self.allow_close = False
+        self.set_size_request(600, -1)
         self.add_css_class("ringing")
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin_top=30, margin_bottom=30,
                       margin_start=30, margin_end=30)
@@ -50,6 +89,7 @@ class RingWindow(Gtk.Window):
         self.set_child(self.stack)
 
         self.connect("close-request", self._on_close)
+        self.connect("map", lambda *_: GLib.idle_add(keep_above, self))
         self._tick()
         self._timers = [GLib.timeout_add_seconds(1, self._tick), GLib.timeout_add_seconds(15, self._raise)]
         self.connect("unrealize", lambda *_: [GLib.source_remove(t) for t in self._timers])
@@ -110,7 +150,6 @@ class RingSession:
         self.puzzle.connect("solved", self._solved)
         self.window = RingWindow(self.app, self.alarm, self.puzzle)
         self.window.connect("unrealize", lambda *_: self._closed())
-        self.window.fullscreen()
         self.window.present()
         self.puzzle.start()
 

@@ -235,7 +235,7 @@ class Playlist:
             self._timer = GLib.timeout_add(200, self._play_next)
 
     def duck(self, ducked: bool) -> None:
-        self.volume = 0.25 if ducked else 1.0
+        self.volume = 0.0 if ducked else 1.0
         self.player.set_volume(self.volume)
 
     def stop(self) -> None:

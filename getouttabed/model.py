@@ -41,6 +41,7 @@ class Alarm:
     enabled: bool = True
     rrule: Optional[str] = None
     start_date: str = ""
+    start_picked: bool = False  # user chose the start date; otherwise it follows the time
     max_volume: int = 100
     recordings: List[str] = field(default_factory=list)
     shuffle: bool = False
@@ -75,8 +76,7 @@ class Alarm:
 
 
 def format_time(hour: int, minute: int) -> str:
-    h12 = hour % 12 or 12
-    return f"{h12}:{minute:02d} {'AM' if hour < 12 else 'PM'}"
+    return f"{hour:02d}:{minute:02d}"
 
 
 def _from_dict(cls, d: dict):

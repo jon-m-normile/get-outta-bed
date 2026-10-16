@@ -49,6 +49,7 @@ def test_remove_recording_from_playlists():
 
 
 def test_format_time():
-    assert model.format_time(0, 5) == "12:05 AM"
-    assert model.format_time(12, 0) == "12:00 PM"
-    assert model.format_time(18, 45) == "6:45 PM"
+    assert model.format_time(0, 5) == "00:05"
+    assert model.format_time(12, 0) == "12:00"
+    assert model.format_time(6, 45) == "06:45"
+    assert model.format_time(18, 45) == "18:45"

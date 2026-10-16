@@ -2,7 +2,7 @@ from gi.repository import GLib, GObject, Gtk
 
 
 class PuzzleContext:
-    """What a puzzle may use: the photo, sound effects, and audio ducking."""
+    """What a puzzle may use: the photo, sound effects, and duck(True/False) to silence the messages."""
 
     def __init__(self, photo, effects, duck):
         self.photo = photo

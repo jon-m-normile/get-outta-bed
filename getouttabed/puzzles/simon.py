@@ -22,21 +22,27 @@ class Simon(Puzzle):
             grid.attach(b, i % 2, i // 2, 1, 1)
             self.pads.append(b)
         self.append(grid)
+        self.play_btn = Gtk.Button(label="▶ Play pattern", halign=Gtk.Align.CENTER)
+        self.play_btn.add_css_class("simon-play")
+        self.play_btn.connect("clicked", lambda *_: self._play())
+        self.append(self.play_btn)
         self.feedback = Gtk.Label()
         self.feedback.add_css_class("puzzle-feedback")
         self.append(self.feedback)
         self._sources = []
-        self.accepting = False
+        self.accepting = True
         self.logic = SimonLogic()
         self._dots()
 
     def start(self):
-        self.ctx.duck(True)
-        self._play("Watch the pattern…", 900)
+        self.feedback.set_label("Press “Play pattern” to see it — as many times as you like.")
 
     def reset(self):
         super().reset()
+        self._cancel()
+        self._your_turn()
         self.logic = SimonLogic()
+        self._dots()
         self.start()
 
     def _later(self, ms, fn, *args):
@@ -59,10 +65,14 @@ class Simon(Puzzle):
         done = self.logic.position
         self.progress.set_label(" ".join("●" if i < done else "○" for i in range(SimonLogic.LENGTH)))
 
-    def _play(self, message, delay=900):
+    def _play(self, delay=600):
+        """Shows the pattern with the alarm messages silenced; the player can ask for it any number of times."""
         self._cancel()
         self.accepting = False
-        self.feedback.set_label(message)
+        self.play_btn.set_sensitive(False)
+        self.ctx.duck(True)
+        self.logic.position = 0
+        self.feedback.set_label("Watch the pattern…")
         self._dots()
         for k, pad in enumerate(self.logic.sequence):
             self._later(delay + k * FLASH_INTERVAL_MS, self._flash, pad)
@@ -70,6 +80,8 @@ class Simon(Puzzle):
 
     def _your_turn(self):
         self.accepting = True
+        self.play_btn.set_sensitive(True)
+        self.ctx.duck(False)
         self.feedback.set_label("Your turn — repeat the pattern.")
 
     def _flash(self, pad):
@@ -86,10 +98,12 @@ class Simon(Puzzle):
         self._dots()
         if result == "solved":
             self.accepting = False
+            self.play_btn.set_sensitive(False)
             self.feedback.set_label("You got it!")
             self.finish(700)
         elif result == "mistake":
             left = 3 - self.logic.failures
-            self._play(f"Oops — watch again. ({left} {'try' if left == 1 else 'tries'} before a new pattern)", 1200)
+            self.feedback.set_label(f"Oops — start again from the first color. "
+                                    f"({left} {'try' if left == 1 else 'tries'} before a new pattern)")
         elif result == "reset":
-            self._play("New pattern — watch closely…", 1200)
+            self.feedback.set_label("New pattern! Press “Play pattern” to see it.")

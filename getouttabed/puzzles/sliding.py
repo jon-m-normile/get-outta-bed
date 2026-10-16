@@ -1,4 +1,4 @@
-from gi.repository import Gdk, Gtk
+from gi.repository import Gdk, GdkPixbuf, Gtk
 
 from .base import BOARD_PX, PhotoBoard, Puzzle, outline
 from .logic import SlidingLogic
@@ -25,7 +25,7 @@ class Sliding(Puzzle):
 
         goal = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, valign=Gtk.Align.CENTER)
         thumb = Gtk.Picture(can_shrink=True, opacity=0.5)
-        thumb.set_paintable(Gdk.Texture.new_for_pixbuf(ctx.photo))
+        thumb.set_paintable(Gdk.Texture.new_for_pixbuf(ctx.photo.scale_simple(150, 150, GdkPixbuf.InterpType.BILINEAR)))
         thumb.set_size_request(150, 150)
         goal.append(thumb)
         lbl = Gtk.Label(label="Goal")

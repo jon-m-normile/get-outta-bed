@@ -42,11 +42,9 @@ class AlarmEditor(Gtk.Window):
             start_date=recurrence.default_start_date(7, 0, now).isoformat())
         self.rule = self.alarm.rrule
         self.start = self.alarm.start
-        self.date_touched = not self.is_new
-        lib = [r.id for r in app.settings.recordings]
-        self.checked = {rid for rid in self.alarm.recordings if rid in lib}
-        self.order = [rid for rid in self.alarm.recordings if rid in lib] + \
-                     [rid for rid in lib if rid not in self.checked]
+        self.date_touched = self.alarm.start_picked
+        lib = {r.id for r in app.settings.recordings}
+        self.playlist = [rid for rid in self.alarm.recordings if rid in lib]
         self._building = False
 
         grid = Gtk.Grid(column_spacing=14, row_spacing=14, margin_top=18, margin_bottom=18,
@@ -62,9 +60,8 @@ class AlarmEditor(Gtk.Window):
             row += 1
 
         # Time
-        h12 = self.alarm.hour % 12 or 12
-        self.hour = Gtk.SpinButton.new_with_range(1, 12, 1)
-        self.hour.set_value(h12)
+        self.hour = Gtk.SpinButton.new_with_range(0, 23, 1)
+        self.hour.set_value(self.alarm.hour)
         self.minute = Gtk.SpinButton.new_with_range(0, 59, 1)
         self.minute.set_value(self.alarm.minute)
         for s in (self.hour, self.minute):
@@ -72,24 +69,18 @@ class AlarmEditor(Gtk.Window):
             s.set_numeric(True)
             s.add_css_class("big-spin")
             s.set_orientation(Gtk.Orientation.VERTICAL)
-        self.minute.connect("output", self._pad_minute)
-        self._pad_minute(self.minute)
-        self.am = Gtk.ToggleButton(label="AM", active=self.alarm.hour < 12)
-        self.pm = Gtk.ToggleButton(label="PM", active=self.alarm.hour >= 12, group=self.am)
-        ampm = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, valign=Gtk.Align.CENTER)
-        ampm.add_css_class("linked")
-        ampm.append(self.am)
-        ampm.append(self.pm)
+        for s in (self.hour, self.minute):
+            s.connect("output", self._pad)
+            self._pad(s)
         tbox = Gtk.Box(spacing=8)
         tbox.append(self.hour)
         colon = Gtk.Label(label=":")
         colon.add_css_class("big-spin")
         tbox.append(colon)
         tbox.append(self.minute)
-        tbox.append(ampm)
+        tbox.append(Gtk.Label(label="24-hour clock", valign=Gtk.Align.CENTER, css_classes=["dim-label"]))
         for w in (self.hour, self.minute):
             w.connect("value-changed", self._time_changed)
-        self.am.connect("toggled", self._time_changed)
         add("Time", tbox)
 
         # Label
@@ -139,12 +130,12 @@ class AlarmEditor(Gtk.Window):
         mode.append(self.shuffle)
         grid.attach(mode, 0, row, 2, 1)
         row += 1
-        self.repeat = Gtk.SpinButton.new_with_range(1, 10, 1)
-        self.repeat.set_value(self.alarm.repeat)
+        self.repeat_count = Gtk.SpinButton.new_with_range(1, 10, 1)
+        self.repeat_count.set_value(self.alarm.repeat)
         self.pause = Gtk.SpinButton.new_with_range(0, 60, 0.5)
         self.pause.set_digits(1)
         self.pause.set_value(self.alarm.pause)
-        for text, spin, unit in (("Play each message", self.repeat, "times"),
+        for text, spin, unit in (("Play each message", self.repeat_count, "times"),
                                  ("Pause between messages", self.pause, "seconds")):
             line = Gtk.Box(spacing=8)
             line.append(spin)
@@ -156,8 +147,18 @@ class AlarmEditor(Gtk.Window):
         frame.set_child(self.messages)
         grid.attach(frame, 0, row, 2, 1)
         row += 1
-        hint = Gtk.Label(label="Checked messages play in this order, then loop. Drag to reorder. "
-                               "With none checked, a built-in alarm tone plays.",
+        adder = Gtk.Box(spacing=8, sensitive=bool(self.app.settings.recordings))
+        self.add_choice = Gtk.DropDown.new_from_strings([r.name for r in self.app.settings.recordings])
+        self.add_choice.set_hexpand(True)
+        add_btn = Gtk.Button(label="Add to playlist")
+        add_btn.connect("clicked", self._add_message)
+        adder.append(self.add_choice)
+        adder.append(add_btn)
+        grid.attach(adder, 0, row, 2, 1)
+        row += 1
+        hint = Gtk.Label(label="The playlist plays top to bottom with the pause between messages, then loops. "
+                               "Add a message more than once to repeat it. Drag to reorder. "
+                               "With an empty playlist, a built-in alarm tone plays.",
                          xalign=0, wrap=True)
         hint.add_css_class("dim-label")
         grid.attach(hint, 0, row, 2, 1)
@@ -191,6 +192,7 @@ class AlarmEditor(Gtk.Window):
         box.append(actions)
         self.set_child(box)
         self.connect("close-request", self._on_close)
+        self._time_changed()
 
     def _on_close(self, *_):
         self.app.preview.stop()
@@ -199,13 +201,12 @@ class AlarmEditor(Gtk.Window):
     # --- time & date -----------------------------------------------------
 
     @staticmethod
-    def _pad_minute(spin):
+    def _pad(spin):
         spin.set_text(f"{int(spin.get_value()):02d}")
         return True
 
     def _hour24(self) -> int:
-        h = int(self.hour.get_value()) % 12
-        return h + 12 if self.pm.get_active() else h
+        return int(self.hour.get_value())
 
     def _time_changed(self, *_):
         if self.date_touched:
@@ -266,52 +267,61 @@ class AlarmEditor(Gtk.Window):
     def _rebuild_messages(self):
         while (r := self.messages.get_row_at_index(0)) is not None:
             self.messages.remove(r)
-        if not self.order:
-            empty = Gtk.Label(label="No recordings yet — add some with the Recordings button.",
-                              margin_top=12, margin_bottom=12, wrap=True)
+        if not self.playlist:
+            text = ("The playlist is empty. Add messages below." if self.app.settings.recordings
+                    else "No recordings yet — add some with the Recordings button.")
+            empty = Gtk.Label(label=text, margin_top=12, margin_bottom=12, wrap=True)
             empty.add_css_class("dim-label")
             self.messages.append(empty)
             return
-        for rid in self.order:
+        for i, rid in enumerate(self.playlist):
             rec = self.app.settings.recording(rid)
             row = Gtk.ListBoxRow(activatable=False)
             box = Gtk.Box(spacing=10, margin_top=6, margin_bottom=6, margin_start=8, margin_end=8)
             handle = Gtk.Label(label="⠿", tooltip_text="Drag to reorder")
             handle.add_css_class("drag-handle")
-            check = Gtk.CheckButton(active=rid in self.checked)
-            check.connect("toggled", self._toggle_message, rid)
+            num = Gtk.Label(label=f"{i + 1}.", width_chars=3, xalign=1)
+            num.add_css_class("dim-label")
             name = Gtk.Label(label=rec.name, xalign=0, hexpand=True, ellipsize=Pango.EllipsizeMode.END)
             dur = Gtk.Label(label=fmt_duration(rec.duration))
             dur.add_css_class("dim-label")
-            for w in (handle, check, name, dur):
+            remove = Gtk.Button(icon_name="window-close-symbolic", tooltip_text="Remove from playlist")
+            remove.add_css_class("flat")
+            remove.connect("clicked", self._remove_message, i)
+            for w in (handle, num, name, dur, remove):
                 box.append(w)
             row.set_child(box)
 
             src = Gtk.DragSource(actions=Gdk.DragAction.MOVE)
-            src.connect("prepare", lambda *_a, rid=rid: Gdk.ContentProvider.new_for_value(rid))
+            src.connect("prepare", lambda *_a, i=i: Gdk.ContentProvider.new_for_value(str(i)))
             row.add_controller(src)
             dst = Gtk.DropTarget.new(GObject.TYPE_STRING, Gdk.DragAction.MOVE)
-            dst.connect("drop", self._drop, rid)
+            dst.connect("drop", self._drop, i)
             dst.connect("enter", lambda t, *_a: (t.get_widget().add_css_class("drop-target"), Gdk.DragAction.MOVE)[1])
             dst.connect("leave", lambda t: t.get_widget().remove_css_class("drop-target"))
             row.add_controller(dst)
             self.messages.append(row)
 
-    def _toggle_message(self, check, rid):
-        if check.get_active():
-            self.checked.add(rid)
-        else:
-            self.checked.discard(rid)
+    def _add_message(self, *_):
+        idx = self.add_choice.get_selected()
+        if idx < len(self.app.settings.recordings):
+            self.playlist.append(self.app.settings.recordings[idx].id)
+            self._rebuild_messages()
+
+    def _remove_message(self, _btn, i):
+        del self.playlist[i]
+        self._rebuild_messages()
 
     def _drop(self, target, value, _x, y, onto):
         target.get_widget().remove_css_class("drop-target")
-        if value == onto or value not in self.order:
+        if not value.isdigit() or int(value) == onto or int(value) >= len(self.playlist):
             return False
-        self.order.remove(value)
-        idx = self.order.index(onto)
+        src = int(value)
+        rid = self.playlist.pop(src)
+        idx = onto if src > onto else onto - 1
         if y > target.get_widget().get_height() / 2:
             idx += 1
-        self.order.insert(idx, value)
+        self.playlist.insert(idx, rid)
         self._rebuild_messages()
         return True
 
@@ -323,10 +333,11 @@ class AlarmEditor(Gtk.Window):
         a.label = self.label.get_text().strip()
         a.rrule = self.rule
         a.start_date = self.start.isoformat()
+        a.start_picked = self.date_touched
         a.max_volume = int(self.volume.get_value())
-        a.recordings = [rid for rid in self.order if rid in self.checked]
+        a.recordings = list(self.playlist)
         a.shuffle = self.shuffle.get_active()
-        a.repeat = int(self.repeat.get_value())
+        a.repeat = int(self.repeat_count.get_value())
         a.pause = self.pause.get_value()
         a.puzzle = PUZZLES[self.puzzle.get_selected()][0]
         return a

@@ -74,4 +74,15 @@ def test_single_file_repeats_then_pauses(tmp_path, timers):
 def test_old_alarm_gets_defaults():
     from getouttabed.model import Alarm, _from_dict
     a = _from_dict(Alarm, {"id": "x", "hour": 6, "minute": 30})
-    assert (a.repeat, a.pause) == (1, 1.5)
+    assert (a.repeat, a.pause, a.start_picked) == (1, 1.5, False)
+
+
+def test_playlist_with_duplicates_loops_with_pause(tmp_path, timers):
+    for n in ("a.wav", "b.wav"):
+        (tmp_path / n).write_bytes(b"")
+    pl = audio.Playlist([tmp_path / n for n in ("a.wav", "a.wav", "b.wav", "a.wav")], gap=4)
+    pl.player = FakePlayer()
+    pl.start()
+    delays = run(pl, timers, 5)
+    assert pl.player.played == ["a.wav", "a.wav", "b.wav", "a.wav", "a.wav", "a.wav"]
+    assert delays == [4000] * 5
