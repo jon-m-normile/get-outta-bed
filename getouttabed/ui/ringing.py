@@ -19,6 +19,9 @@ class RingWindow(Gtk.Window):
 
     def __init__(self, app, alarm: Alarm, puzzle):
         super().__init__(application=app, title="Get Outta Bed!", decorated=False)
+        # Own window group, so an open modal dialog (e.g. the editor's "Ring now") can't block the puzzle.
+        self.group = Gtk.WindowGroup()
+        self.group.add_window(self)
         self.allow_close = False
         self.add_css_class("ringing")
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin_top=30, margin_bottom=30,
