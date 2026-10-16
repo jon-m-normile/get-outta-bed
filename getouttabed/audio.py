@@ -21,6 +21,7 @@ RAMP_SECONDS = 180
 RAMP_TICK_MS = 500
 REASSERT_SECONDS = 10
 GAP_SECONDS = 1.5
+REPEAT_GAP_SECONDS = 0.5
 TEST_SECONDS = 5
 
 
@@ -173,12 +174,15 @@ def next_index(n: int, current: Optional[int], shuffle: bool, rng=random) -> int
 
 
 class Playlist:
-    """Loops files with a gap between them; falls back to the alarm tone."""
+    """Loops files, playing each `repeat` times with `gap` seconds before the next;
+    falls back to the alarm tone."""
 
-    def __init__(self, files: List[Path], shuffle: bool = False, gap: float = GAP_SECONDS):
+    def __init__(self, files: List[Path], shuffle: bool = False, gap: float = GAP_SECONDS, repeat: int = 1):
         self.files = [Path(f) for f in files if Path(f).exists()]
         self.shuffle = shuffle
         self.gap = gap
+        self.repeat = max(1, repeat)
+        self.plays = 0
         self.index: Optional[int] = None
         self.volume = 1.0
         self.running = False
@@ -197,12 +201,24 @@ class Playlist:
         if not self.running:
             return False
         self.index = next_index(len(self.files), self.index, self.shuffle)
+        self.plays = 0
+        return self._play_current()
+
+    def _play_current(self) -> bool:
+        self._timer = None
+        if not self.running:
+            return False
+        self.plays += 1
         self.player.play(self.files[self.index], self.volume)
         return False
 
     def _on_eos(self) -> None:
         self.player.stop()
-        if self.running and self._timer is None:
+        if not self.running or self._timer is not None:
+            return
+        if self.plays < self.repeat:
+            self._timer = GLib.timeout_add(int(REPEAT_GAP_SECONDS * 1000), self._play_current)
+        else:
             self._timer = GLib.timeout_add(int(self.gap * 1000), self._play_next)
 
     def _on_error(self, message: str) -> None:

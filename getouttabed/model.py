@@ -44,6 +44,8 @@ class Alarm:
     max_volume: int = 100
     recordings: List[str] = field(default_factory=list)
     shuffle: bool = False
+    repeat: int = 1  # times each message plays before moving on
+    pause: float = 1.5  # seconds of silence before the next message
     puzzle: str = "surprise"
     ended: bool = False
     # ISO UTC instant up to which occurrences have been handled (rung or skipped).

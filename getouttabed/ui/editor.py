@@ -139,6 +139,17 @@ class AlarmEditor(Gtk.Window):
         mode.append(self.shuffle)
         grid.attach(mode, 0, row, 2, 1)
         row += 1
+        self.repeat = Gtk.SpinButton.new_with_range(1, 10, 1)
+        self.repeat.set_value(self.alarm.repeat)
+        self.pause = Gtk.SpinButton.new_with_range(0, 60, 0.5)
+        self.pause.set_digits(1)
+        self.pause.set_value(self.alarm.pause)
+        for text, spin, unit in (("Play each message", self.repeat, "times"),
+                                 ("Pause between messages", self.pause, "seconds")):
+            line = Gtk.Box(spacing=8)
+            line.append(spin)
+            line.append(Gtk.Label(label=unit))
+            add(text, line)
         self.messages = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
         self.messages.add_css_class("boxed-list")
         frame = Gtk.Frame()
@@ -315,6 +326,8 @@ class AlarmEditor(Gtk.Window):
         a.max_volume = int(self.volume.get_value())
         a.recordings = [rid for rid in self.order if rid in self.checked]
         a.shuffle = self.shuffle.get_active()
+        a.repeat = int(self.repeat.get_value())
+        a.pause = self.pause.get_value()
         a.puzzle = PUZZLES[self.puzzle.get_selected()][0]
         return a
 

@@ -92,13 +92,14 @@ class RingSession:
         self.ramp = audio.RampController(self.app.volume, self.alarm.max_volume)
         vol, muted = self.ramp.begin()
         files = self.app.playlist_files(self.alarm)
-        self.playlist = audio.Playlist(files, self.alarm.shuffle)
+        self.playlist = audio.Playlist(files, self.alarm.shuffle, self.alarm.pause, self.alarm.repeat)
         self.playlist.start()
         self.started = time.monotonic()
         log(f"RING{' (test)' if self.test else ''} {self.alarm.time_text()} {self.alarm.label!r}: "
             f"start volume {vol}%{' (was muted)' if muted else ''}, max {self.alarm.max_volume}%, "
             f"puzzle {PUZZLE_NAMES[self.puzzle_key]}, "
-            f"{len(files)} message(s){' (built-in tone)' if self.playlist.using_fallback else ''}")
+            f"{len(files)} message(s){' (built-in tone)' if self.playlist.using_fallback else ''}, "
+            f"each x{self.alarm.repeat}, {self.alarm.pause:g}s pause")
 
         self.effects = audio.Effects()
         ctx = PuzzleContext(load_photo(), self.effects, self._duck)
