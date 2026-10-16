@@ -163,6 +163,9 @@ class App(Gtk.Application):
         for f in files:
             src = Path(f.get_path()) if hasattr(f, "get_path") else Path(f)
             ext = src.suffix.lower()
+            if not src.is_file():
+                errors.append(f"“{src.name}” couldn't be found. Try renaming it without a # in the name.")
+                continue
             if ext not in AUDIO_EXTENSIONS:
                 errors.append(f"“{src.name}” isn't a supported audio file.")
                 continue

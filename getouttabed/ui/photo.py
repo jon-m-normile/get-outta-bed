@@ -5,7 +5,7 @@ from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # noqa: E402
 
 from .. import paths  # noqa: E402
 from ..log import log  # noqa: E402
-from .dialogs import message  # noqa: E402
+from .dialogs import choose_files, message  # noqa: E402
 
 PHOTO_SIZE = 900
 
@@ -78,20 +78,10 @@ class PhotoDialog(Gtk.Window):
         self.caption.set_label("Your photo" if paths.photo_file().exists() else "Default picture")
 
     def _choose(self, *_):
-        chooser = Gtk.FileChooserNative.new("Choose a photo", self, Gtk.FileChooserAction.OPEN, "Choose", "Cancel")
-        f = Gtk.FileFilter()
-        f.set_name("Photos")
         exts = ["jpg", "jpeg", "png"] + (["heic", "heif"] if heif_supported() else [])
-        for e in exts:
-            f.add_pattern(f"*.{e}")
-            f.add_pattern(f"*.{e.upper()}")
-        chooser.add_filter(f)
 
-        def response(c, r):
-            self._chooser = None
-            if r != Gtk.ResponseType.ACCEPT:
-                return
-            path = c.get_file().get_path()
+        def chosen(files):
+            path = files[0].get_path()
             try:
                 save_square(path)
                 log(f"puzzle photo set from {path}")
@@ -99,9 +89,7 @@ class PhotoDialog(Gtk.Window):
                 message(self, "That photo couldn't be opened", e.message)
             self._show()
 
-        chooser.connect("response", response)
-        self._chooser = chooser
-        chooser.show()
+        choose_files(self, "Choose a photo", "Choose", "Photos", [f"*.{e}" for e in exts], False, chosen)
 
     def _reset(self, *_):
         try:

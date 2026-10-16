@@ -24,3 +24,7 @@ Results:
 - Bug fixed: in PyGObject on GTK4, a window's "destroy" signal doesn't fire while Python still holds a reference. Because of this, `app.ringing` never cleared and the Recordings window couldn't reopen. The ringing and recordings windows now clean up on "unrealize" instead (ringing.py:52, ringing.py:108, recordings.py:38, main_window.py:125).
 - Not done here: install.sh has not been run for real on this machine, because it changes autostart and inhibits suspend. On this box it would `sudo apt install python3-dateutil`, since dateutil is currently pip-installed.
 - Still open: the manual acceptance checklist (PRD §11) on the iMac, covering dock, reboot/autostart, loudness and locked-screen behavior.
+
+## Fixes after release
+
+- [x] 9. Recordings named with "#" (e.g. "Wake Up #1.FLAC") were rejected as "not a supported format". Cause: the portal file chooser (FileChooserNative) passes the path through a URI, and GIO drops everything after an unescaped "#", so the app received "Wake Up ". Fix: both choosers now use an in-process Gtk.FileChooserDialog (`choose_files` in ui/dialogs.py). A missing file now reports "couldn't be found" instead of "unsupported" (app.py). Verified by importing both FLAC files from ~/Downloads through the new chooser.

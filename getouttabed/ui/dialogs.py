@@ -17,6 +17,31 @@ def confirm(parent, text: str, secondary: str, action: str, on_yes) -> None:
     dlg.present()
 
 
+def choose_files(parent, title: str, accept: str, filter_name: str, patterns, multiple: bool, on_files) -> None:
+    """In-process GTK chooser. The portal (FileChooserNative) round-trips paths through URIs and
+    loses everything after a '#' in a filename, e.g. "Wake Up #1.flac" arrives as "Wake Up "."""
+    dlg = Gtk.FileChooserDialog(transient_for=parent, modal=True, title=title, action=Gtk.FileChooserAction.OPEN,
+                                select_multiple=multiple)
+    dlg.add_button("Cancel", Gtk.ResponseType.CANCEL)
+    dlg.add_button(accept, Gtk.ResponseType.ACCEPT).add_css_class("suggested-action")
+    f = Gtk.FileFilter()
+    f.set_name(filter_name)
+    for p in patterns:
+        f.add_pattern(p)
+        f.add_pattern(p.upper())
+    dlg.add_filter(f)
+
+    def response(d, r):
+        files = d.get_files()
+        files = [files.get_item(i) for i in range(files.get_n_items())] if r == Gtk.ResponseType.ACCEPT else []
+        d.destroy()
+        if files:
+            on_files(files)
+
+    dlg.connect("response", response)
+    dlg.present()
+
+
 def message(parent, text: str, secondary: str = "") -> None:
     dlg = Gtk.MessageDialog(transient_for=parent, modal=True, message_type=Gtk.MessageType.WARNING,
                             buttons=Gtk.ButtonsType.OK, text=text, secondary_text=secondary or None)

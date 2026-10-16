@@ -1,6 +1,6 @@
 from gi.repository import Gdk, Gtk, Pango
 
-from .dialogs import confirm, message, prompt_text
+from .dialogs import choose_files, confirm, message, prompt_text
 from .editor import fmt_duration
 
 PATTERNS = ["*.mp3", "*.m4a", "*.aac", "*.wav", "*.ogg", "*.oga", "*.opus", "*.flac"]
@@ -92,24 +92,7 @@ class RecordingsWindow(Gtk.Window):
                 lambda: self.app.delete_recording(rec))
 
     def _choose(self, *_):
-        chooser = Gtk.FileChooserNative.new("Add recordings", self, Gtk.FileChooserAction.OPEN, "Add", "Cancel")
-        chooser.set_select_multiple(True)
-        f = Gtk.FileFilter()
-        f.set_name("Audio files")
-        for p in PATTERNS:
-            f.add_pattern(p)
-            f.add_pattern(p.upper())
-        chooser.add_filter(f)
-
-        def response(c, r):
-            if r == Gtk.ResponseType.ACCEPT:
-                model = c.get_files()
-                self._import([model.get_item(i) for i in range(model.get_n_items())])
-            self._chooser = None
-
-        chooser.connect("response", response)
-        self._chooser = chooser
-        chooser.show()
+        choose_files(self, "Add recordings", "Add", "Audio files", PATTERNS, True, self._import)
 
     def _import(self, files):
         errors = self.app.import_files(files)
