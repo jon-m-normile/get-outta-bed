@@ -2,7 +2,7 @@
 import random
 from typing import List, Optional
 
-PUZZLE_KEYS = ["jigsaw", "sliding", "balloon", "math", "simon"]
+PUZZLE_KEYS = ["jigsaw", "balloon", "math", "simon"]
 MAX_FAILURES = 3
 
 
@@ -40,73 +40,6 @@ class JigsawLogic:
     @property
     def solved(self) -> bool:
         return self.misplaced() == 0
-
-
-class SlidingLogic:
-    """board[pos] = tile index; the gap is tile n-1 (bottom-right)."""
-
-    def __init__(self, size: int = 3, rng=random, min_moves: int = 15, max_moves: int = 25):
-        self.size, self.rng = size, rng
-        self.min_moves, self.max_moves = min_moves, max_moves
-        self.gap_tile = size * size - 1
-        self.board: List[int] = []
-        self.scramble()
-
-    @property
-    def gap(self) -> int:
-        return self.board.index(self.gap_tile)
-
-    def neighbors(self, pos: int) -> List[int]:
-        r, c = divmod(pos, self.size)
-        out = []
-        for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-            rr, cc = r + dr, c + dc
-            if 0 <= rr < self.size and 0 <= cc < self.size:
-                out.append(rr * self.size + cc)
-        return out
-
-    def scramble(self) -> None:
-        self.board = list(range(self.size * self.size))
-        self.moves_made = 0
-        target = self.rng.randint(self.min_moves, self.max_moves)
-        prev = None
-        while self.moves_made < target or self.solved:
-            options = [p for p in self.neighbors(self.gap) if p != prev]
-            pick = self.rng.choice(options)
-            prev = self.gap
-            self.move(pick)
-            self.moves_made += 1
-
-    def can_move(self, pos: int) -> bool:
-        return pos in self.neighbors(self.gap)
-
-    def move(self, pos: int) -> bool:
-        if not self.can_move(pos):
-            return False
-        g = self.gap
-        self.board[g], self.board[pos] = self.board[pos], self.board[g]
-        return True
-
-    def move_direction(self, direction: str) -> bool:
-        """Arrow keys move the tile that sits opposite the arrow into the gap."""
-        r, c = divmod(self.gap, self.size)
-        dr, dc = {"up": (1, 0), "down": (-1, 0), "left": (0, 1), "right": (0, -1)}[direction]
-        rr, cc = r + dr, c + dc
-        if 0 <= rr < self.size and 0 <= cc < self.size:
-            return self.move(rr * self.size + cc)
-        return False
-
-    def is_solvable(self) -> bool:
-        tiles = [t for t in self.board if t != self.gap_tile]
-        inversions = sum(1 for i in range(len(tiles)) for j in range(i + 1, len(tiles)) if tiles[i] > tiles[j])
-        if self.size % 2 == 1:
-            return inversions % 2 == 0
-        gap_row_from_bottom = self.size - self.gap // self.size
-        return (inversions + gap_row_from_bottom) % 2 == 1
-
-    @property
-    def solved(self) -> bool:
-        return self.board == list(range(self.size * self.size))
 
 
 class MathProblem:

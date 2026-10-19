@@ -46,7 +46,7 @@ The user is a teenager who has been sleeping through alarms. Her parent records 
 | **Repeat** | See 5.1. |
 | **Maximum volume** | Slider from 10–100% (default **100%**): the level the volume ramp climbs to (see §8.1). It has a **▶ Test** button that plays the first selected recording at that volume for 5 seconds, then puts the volume back where it was. |
 | **Messages** | See 5.2. |
-| **Puzzle** | Dropdown with Picture Jigsaw, Sliding Tile, Balloon Pop, Math, Simon, or **Surprise me** (random each time, never the same puzzle twice in a row). |
+| **Puzzle** | Dropdown with Picture Jigsaw, Balloon Pop, Math, Simon, or **Surprise me** (random each time, never the same puzzle twice in a row). |
 | **Ring now (test)** | Fires this alarm immediately, with the full ringing screen and puzzle. |
 
 Save and Cancel buttons. Turning an alarm on or off from the list doesn't open the editor.
@@ -121,12 +121,11 @@ Each puzzle should take a typical awake person about **15–30 seconds**. They n
 **Fairness rule:** if she fails a puzzle three times (only possible in Math and Simon), give her a new instance of the same puzzle type. Never let it reach an unwinnable state.
 
 1. **Picture Jigsaw:** the photo is cut into a 3×3 grid and scrambled into a random arrangement that isn't already solved, with at least 6 tiles out of place. She clicks one tile and then another to swap them, and dragging also works. A tile in its correct spot shows a subtle checkmark or border. The puzzle is solved when every tile is in place.
-2. **Sliding Tile:** the photo is cut into a 3×3 grid with the bottom-right tile removed. Scramble it by making **15–25 random legal moves** from the solved state, so it's always solvable and short. Clicking a tile next to the gap slides it, and the arrow keys work too. Show a faint "goal" thumbnail. When it's solved, the missing tile fills in.
-3. **Balloon Pop:** colorful balloons float upward at a gentle speed, a few at a time. She clicks them to pop them, with a pop animation and an original sound effect. Popping **10** solves it. Missed balloons simply float away and new ones keep coming, so there's no fail state.
-4. **Math:** **3 problems** shown one at a time. Each is two-digit addition or subtraction (result 0–199) or a single-digit multiplication. Answers are typed into a large text field and checked on Enter. A wrong answer shakes the field and swaps in a new problem. After 3 wrong answers on the same set, generate a new set.
-5. **Simon:** four large colored pads, each with its own tone, played over the quieted message audio or between messages. Show a sequence of **5** flashes, about 0.6 seconds apart, then she repeats it by clicking. A mistake replays the same sequence. After 3 failures, generate a new sequence.
+2. **Balloon Pop:** colorful balloons float upward at a gentle speed, a few at a time. She clicks them to pop them, with a pop animation and an original sound effect. Popping **10** solves it. Missed balloons simply float away and new ones keep coming, so there's no fail state.
+3. **Math:** **3 problems** shown one at a time. Each is two-digit addition or subtraction (result 0–199) or a single-digit multiplication. Answers are typed into a large text field and checked on Enter. A wrong answer shakes the field and swaps in a new problem. After 3 wrong answers on the same set, generate a new set.
+4. **Simon:** four large colored pads, each with its own tone, played over the quieted message audio or between messages. Show a sequence of **5** flashes, about 0.6 seconds apart, then she repeats it by clicking. A mistake replays the same sequence. After 3 failures, generate a new sequence.
 
-**Surprise me** picks randomly among the five and never repeats the previous morning's puzzle.
+**Surprise me** picks randomly among the four and never repeats the previous morning's puzzle.
 
 ## 10. Installation
 
@@ -146,7 +145,7 @@ Each puzzle should take a typical awake person about **15–30 seconds**. They n
 - Recurrence: every preset, every Custom combination (interval, weekdays, monthly by day and by Nth weekday, last-weekday, ending on a date or after N times), DST transitions in America/New_York (the spring-forward gap and the fall-back repeated hour), and Feb 29 / 31st-of-the-month cases.
 - Scheduler: missed-alarm catch-up within 15 minutes and skip beyond it, duplicate suppression, and one-time alarms switching themselves off.
 - Volume ramp, with time faked: the start level is used at t=0, the volume is at the halfway point at t=90 s and at the maximum at t≥180 s, it's never lowered when the start is above the maximum, and a muted start gets unmuted.
-- Puzzle logic, separate from the UI: jigsaw scrambles are never already solved, sliding scrambles are always solvable, the math answer checker works, and the Simon sequence comparison works.
+- Puzzle logic, separate from the UI: jigsaw scrambles are never already solved, the math answer checker works, and the Simon sequence comparison works.
 - Settings: the save/load round trip and recovery from a corrupt file.
 
 **Manual acceptance checklist (on the iMac)**
@@ -155,10 +154,10 @@ Each puzzle should take a typical awake person about **15–30 seconds**. They n
 - [ ] An alarm set 2 minutes ahead rings on time even after the system was muted and turned down. It starts at the previous volume, reaches the maximum volume after 3 minutes, and returns to the previous volume once the puzzle is solved.
 - [ ] Turning the volume down while the alarm is ringing gets corrected within 10 seconds (after the ramp) or within 1 second (during the ramp).
 - [ ] Recordings play in the chosen order and in Shuffle mode, and loop.
-- [ ] Each of the five puzzles stops the alarm, and nothing else does (the close button, Escape, Alt+F4).
+- [ ] Each of the four puzzles stops the alarm, and nothing else does (the close button, Escape, Alt+F4).
 - [ ] Weekly, monthly-Nth-weekday and Custom repeats show correct "Next alarm" times.
 - [ ] Recordings from iPhone Voice Memos (.m4a) import and play.
-- [ ] An uploaded photo appears in the Jigsaw and Sliding Tile puzzles.
+- [ ] An uploaded photo appears in the Jigsaw puzzle.
 - [ ] The computer doesn't suspend overnight while the app is running.
 
 ## 12. Out of scope for v1
@@ -175,7 +174,7 @@ Snooze; backup phone calls or push alerts (possibly a later "wake a parent" feat
   3. main window and editor
   4. recordings library and photo
   5. ringing screen
-  6. the five puzzles, one at a time, each testable via **Ring now (test)**
+  6. the four puzzles, one at a time, each testable via **Ring now (test)**
   7. installer, icon and README
   8. a pass through the acceptance checklist
 - Keep the code modular: `model.py`, `recurrence.py`, `scheduler.py`, `audio.py`, `ui/` and `puzzles/`, with one file per puzzle behind a common interface (`start()`, a `solved` signal, `reset()`).

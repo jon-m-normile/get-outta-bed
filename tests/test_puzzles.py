@@ -1,6 +1,6 @@
 import random
 
-from getouttabed.puzzles.logic import (JigsawLogic, MathLogic, MathProblem, SimonLogic, SlidingLogic,
+from getouttabed.puzzles.logic import (JigsawLogic, MathLogic, MathProblem, SimonLogic,
                                        choose_puzzle, make_problem, BalloonLogic, PUZZLE_KEYS)
 
 
@@ -16,28 +16,6 @@ def test_jigsaw_swap_to_solve():
     for pos in range(9):
         j.swap(pos, j.board.index(pos))
     assert j.solved
-
-
-def test_sliding_always_solvable_and_scrambled():
-    for seed in range(500):
-        s = SlidingLogic(rng=random.Random(seed))
-        assert s.is_solvable() and not s.solved
-        assert 15 <= s.moves_made <= 27
-
-
-def test_sliding_unsolvable_detected():
-    s = SlidingLogic(rng=random.Random(0))
-    s.board = [1, 0, 2, 3, 4, 5, 6, 7, 8]
-    assert not s.is_solvable()
-
-
-def test_sliding_moves():
-    s = SlidingLogic(rng=random.Random(0))
-    s.board = list(range(9))
-    s.board[7], s.board[8] = 8, 7  # gap at 7
-    assert not s.move(0)
-    assert s.move_direction("left")  # tile right of gap moves left
-    assert s.solved
 
 
 def test_math_checker():

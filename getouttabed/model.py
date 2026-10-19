@@ -10,7 +10,6 @@ from . import recurrence
 
 PUZZLES = [
     ("jigsaw", "Picture Jigsaw"),
-    ("sliding", "Sliding Tile"),
     ("balloon", "Balloon Pop"),
     ("math", "Math"),
     ("simon", "Simon"),
